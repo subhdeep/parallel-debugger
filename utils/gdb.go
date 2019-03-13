@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/cyrus-and/gdb"
+	"github.com/milindl/gdb"
 )
 
 var breakpointHitNotification = make(chan int)
