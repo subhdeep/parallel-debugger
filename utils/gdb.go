@@ -17,20 +17,23 @@ func handleNotifications(notification map[string]interface{}) {
 	}
 	jsonStr, _ := json.Marshal(notification)
 	fmt.Println(string(jsonStr))
-
 	switch notification["class"] {
 	case "done":
 	case "running":
-		<-breakpointHitNotification
+		if len(notification) == 1 {
+			<-breakpointHitNotification
+		}
 	case "stopped":
 		breakpointHitNotification <- 1
 	case "error":
 		fmt.Println("TODO: Error handling")
+	// default:
+	// 	fmt.Printf("Class = %s\n", notification["class"])
 	}
 }
 
-func SynchronizedSend(operation string, arguments ...string) (map[string]interface{}) {
-	result, err := gdb.Send(operation, arguments)
+func SynchronizedSend(gdb *gdb.Gdb, operation string, arguments ...string) (map[string]interface{}) {
+	result, err := gdb.Send(operation, arguments...)
 	CheckError(err)
 	handleNotifications(result)
 	return result
@@ -41,10 +44,11 @@ func InitGDB(filename string) {
 	// start a new instance and pipe the target output to stdout
 	gdb, _ := gdb.New(handleNotifications)
 	go io.Copy(os.Stdout, gdb)
-	go io.Copy(gdb, os.Stdin)
+	// go io.Copy(gdb, os.Stdin)
 
-	result := SynchronizedSend("file", filename)
-	result = SynchronizedSend("set exec-wrapper env \"LD_PRELOAD=./mpic.so\"")
-	result = SynchronizedSend("run")
-	SynchronizedSend("quit")
+
+	SynchronizedSend(gdb, "file", filename)
+	SynchronizedSend(gdb, "set exec-wrapper env \"LD_PRELOAD=./mpic.so\"")
+	SynchronizedSend(gdb, "run")
+	gdb.Exit()
 }
