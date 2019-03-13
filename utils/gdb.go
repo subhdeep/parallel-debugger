@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/cyrus-and/gdb"
@@ -19,9 +18,22 @@ func handleNotifications(notification map[string]interface{}) {
 	jsonStr, _ := json.Marshal(notification)
 	fmt.Println(string(jsonStr))
 
-	if notification["class"] == "stopped" {
+	switch notification["class"] {
+	case "done":
+	case "running":
+		<-breakpointHitNotification
+	case "stopped":
 		breakpointHitNotification <- 1
+	case "error":
+		fmt.Println("TODO: Error handling")
 	}
+}
+
+func SynchronizedSend(operation string, arguments ...string) (map[string]interface{}) {
+	result, err := gdb.Send(operation, arguments)
+	CheckError(err)
+	handleNotifications(result)
+	return result
 }
 
 // InitGDB initializes the GDB interpreter
@@ -31,38 +43,8 @@ func InitGDB(filename string) {
 	go io.Copy(os.Stdout, gdb)
 	go io.Copy(gdb, os.Stdin)
 
-	// load and run a program
-	result, err := gdb.Send("file-exec-and-symbols", filename)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	handleNotifications(result)
-
-	result, err = gdb.Send("break-insert", "4")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	handleNotifications(result)
-
-	gdb.Send("exec-run")
-	<-breakpointHitNotification
-
-	fmt.Println("-------------------- Starting EXEC-NEXT")
-	gdb.Send("exec-next")
-	fmt.Println("-------------------- Finished EXEC-NEXT")
-	<-breakpointHitNotification
-	fmt.Println("-------------------- Got 'stop' notification")
-
-	fmt.Println("-------------------- Starting DATA-EVAL-EXPRESSION")
-	gdb.Send("data-evaluate-expression", "init_debugger()")
-	fmt.Println("-------------------- Starting EXEC-RUN")
-	gdb.Send("exec-run")
-	fmt.Println("-------------------- Finished EXEC-RUN")
-	<-breakpointHitNotification
-	fmt.Println("-------------------- Got 'stop' notification")
-
-	gdb.Exit()
+	result := SynchronizedSend("file", filename)
+	result = SynchronizedSend("set exec-wrapper env \"LD_PRELOAD=./mpic.so\"")
+	result = SynchronizedSend("run")
+	SynchronizedSend("quit")
 }
