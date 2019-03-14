@@ -30,8 +30,8 @@ func main() {
 	fmt.Fprintf(conn, "%s", line)
 	log.Printf("GDB Initialized\n")
 
-	// From now on, each command that this receives will be run inside gdb.
-	// And each output that it gets will be handled by the server.
+	// Each output that the gdb instance gets from gdb mi must be processed.
+	// One hook is added here, which will send all ~console messages to the server.
 	gdbInstance.AddNotificationHook("ConsoleSendingHook", func(notification map[string]interface{}) bool {
 		if notification["type"] == "console" {
 			// On getting a console notification, relay it to the server.
@@ -40,6 +40,7 @@ func main() {
 		return true
 	})
 
+	// Each message from the server needs to be processed using ProcessMessage.
 	processCommandsDone := make(chan bool)
 	go gdbInstance.ProcessCommands(conn, processCommandsDone)
 	<-processCommandsDone
