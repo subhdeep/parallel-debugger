@@ -17,10 +17,13 @@ func main() {
 	}
 	conn, err := net.Dial("tcp", os.Args[1])
 	utils.CheckError(err)
-	// client's message
-	fmt.Fprintf(conn, "1,1")
 	filename := os.Args[2]
-	utils.InitGDB(filename)
+	pdFilename := utils.InitGDB(filename)
+	f, err := os.Open(pdFilename)
+	utils.CheckError(err)
+	line, err := bufio.NewReader(f).ReadString('\n')
+	utils.CheckError(err)
+	fmt.Fprintf(conn, "%s", line)
 	log.Printf("GDB Initiaalized\n")
 	for {
 		status, err := bufio.NewReader(conn).ReadString('\n')

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"log"
+	"os"
 
 	"github.com/milindl/gdb"
 )
@@ -34,7 +34,7 @@ func handleNotifications(notification map[string]interface{}) {
 	}
 }
 
-func SynchronizedSend(gdb *gdb.Gdb, operation string, arguments ...string) (map[string]interface{}) {
+func SynchronizedSend(gdb *gdb.Gdb, operation string, arguments ...string) map[string]interface{} {
 	result, err := gdb.Send(operation, arguments...)
 	CheckError(err)
 	handleNotifications(result)
@@ -60,24 +60,21 @@ func getSoFilepath() string {
 }
 
 // InitGDB initializes the GDB interpreter
-func InitGDB(filename string) (rank int, size int) {
+func InitGDB(filename string) (pdFilename string) {
 	// start a new instance and pipe the target output to stdout
 	gdb, _ := gdb.New(handleNotifications)
 	go io.Copy(os.Stdout, gdb)
 	// go io.Copy(gdb, os.Stdin)
 	fname := getSoFilepath()
-
+	pdFilename = fmt.Sprintf("/tmp/pd_init_data_%d", os.Getpid())
 	SynchronizedSend(gdb, "set breakpoint pending on")
 	SynchronizedSend(gdb, "file", filename)
-	SynchronizedSend(gdb, fmt.Sprintf("set exec-wrapper env 'LD_PRELOAD=%s'", fname))
+	SynchronizedSend(gdb, fmt.Sprintf("set exec-wrapper env 'LD_PRELOAD=%s' 'FILENAME=%s'", fname, pdFilename))
 	SynchronizedSend(gdb, "break PMPI_Init")
 	SynchronizedSend(gdb, "run")
 	SynchronizedSend(gdb, "finish")
 	SynchronizedSend(gdb, "finish")
+	SynchronizedSend(gdb, "continue")
 
-	// SynchronizedSend(gdb, "c")
-	// gdb.Exit()
-	size = 1
-	rank = 1
 	return
 }

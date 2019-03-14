@@ -1,5 +1,5 @@
-_test.c
-test
+*_test.c
+*test
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
