@@ -18,19 +18,29 @@ func main() {
 	conn, err := net.Dial("tcp", os.Args[1])
 	utils.CheckError(err)
 	filename := os.Args[2]
-	pdFilename := utils.InitGDB(filename)
+
+	gdbInstance := utils.NewGdb()
+
+	pdFilename := gdbInstance.InitGdb(filename)
+
 	f, err := os.Open(pdFilename)
 	utils.CheckError(err)
 	line, err := bufio.NewReader(f).ReadString('\n')
 	utils.CheckError(err)
 	fmt.Fprintf(conn, "%s", line)
-	log.Printf("GDB Initiaalized\n")
-	for {
-		status, err := bufio.NewReader(conn).ReadString('\n')
-		fmt.Println(status)
-		if err != nil {
-			fmt.Println(err)
-			break
+	log.Printf("GDB Initialized\n")
+
+	// From now on, each command that this receives will be run inside gdb.
+	// And each output that it gets will be handled by the server.
+	gdbInstance.AddNotificationHook("ConsoleSendingHook", func(notification map[string]interface{}) bool {
+		if notification["type"] == "console" {
+			// On getting a console notification, relay it to the server.
+			fmt.Fprintf(conn, "CONSOLE:%s", notification["payload"])
 		}
-	}
+		return true
+	})
+
+	processCommandsDone := make(chan bool)
+	go gdbInstance.ProcessCommands(conn, processCommandsDone)
+	<-processCommandsDone
 }
