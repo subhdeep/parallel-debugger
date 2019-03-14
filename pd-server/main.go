@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"git.cse.iitk.ac.in/ssaha/parallel-debugger/utils"
 )
@@ -42,7 +44,52 @@ func handleConnection(c net.Conn) {
 	if wSize == len(connections) {
 		fmt.Printf("All the clients are connected\n")
 		for _, v := range connections {
-			fmt.Fprintf(*v, "All clients, including you, are connected\n")
+			fmt.Fprintf(*v, "COMMAND:All clients, including you, are connected\n")
 		}
+		go takeUserInput()
+		processClient := make(chan bool)
+		go processClientMessage(wSize, processClient)
+		<-processClient
+		connections = make(map[int]*net.Conn)
 	}
+}
+
+func takeUserInput() {
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		input := strings.TrimSpace(scanner.Text())
+		sendCommandToAll(input)
+	}
+}
+
+func sendCommandToAll(message string) {
+	for _, c := range connections {
+		fmt.Fprintf(*c, fmt.Sprintf("RUN:%s\n", message))
+	}
+}
+
+func processClientMessage(wSize int, processClientDone chan bool) {
+	if wSize != len(connections) {
+		return
+	}
+
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(wSize)
+
+	for r, c := range connections {
+
+		// handling output of every client in a separate go routine
+		go func(r int, c *net.Conn) {
+			defer waitGroup.Done()
+			scanner := bufio.NewScanner(*c)
+			for scanner.Scan() {
+				utils.CheckError(scanner.Err())
+				line := scanner.Text()
+				fmt.Printf("rank %d: %s\n", r, line)
+			}
+		}(r, c)
+
+	}
+	waitGroup.Wait()
+	processClientDone <- true
 }
