@@ -79,7 +79,75 @@ This is a text in the first frame. This is a text in the first frame. This is a 
    \includegraphics[width=0.8\textwidth]{flow}
 \end{frame}
 \section{Implementation}
+\subsection{parallel-debugger-client (pd-client)}
 
+\begin{frame}
+  \frametitle{pd-client}
+  \begin{itemize}
+  \item <1-> Handles the networking of an individual client to the server.
+    \begin{itemize}
+      \item <2-> Sends request to the server using \textbf{TCP sockets}.
+    \end{itemize}
+    \item  <3-> Loads the target binary \texttt{./test} and instrument it using
+    LD preload.
+  \item <4-> Acts as a frontend to the GDB interpreter \texttt{mi2}.
+    \begin{itemize}
+    \item <5-> Conveys the instructions from the server to individual clients.
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Machine Interface (mi)}
+  \begin{itemize}
+  \item <1-> {Currently GDB supports multiple command interpreters, and
+      some of them are used to make user interface for the GDB}
+  \item <2-> {\textbf{mi2} is a line based machine oriented text interface to
+    GDB}
+\item <3-> {The default interpreter is the \textbf{Console Interpreter}. For
+   a different interpreter user can use}
+\item <3-> {\texttt{gdb .test --interpreter=(console|mi|mi2)}}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{mi2 vs console}
+  \begin{columns}
+      \begin{column}{0.5\textwidth}
+        \begin{center}
+          \textbf{mi2}
+          \end{center}
+    \begin{itemize}
+      \item <1-> \texttt{-file-exec-and-symbols ./test}
+      \item <2-> \texttt{-break-insert main}
+      \item <3-> \texttt{-exec-run}
+      \item <4-> \texttt{-exec-continue}
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{center}
+        \textbf{console}
+      \end{center}
+      \begin{itemize}
+      \item <1-> \texttt{file ./test}
+      \item <2-> \texttt{break main}
+      \item <3-> \texttt{run}
+      \item <4-> \texttt{continue}
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\subsection{parallel-debugger-server (pd-server)}
+
+\begin{frame}
+  \begin{itemize}
+  \item <1-> Ensures that all the clients are connected to it.
+  \item <2-> Maintains a in-memory \texttt{map[rank int]conn *net.Conn} to store the clients that are already
+    connected. 
+  \end{itemize}
+  \frametitle{pd-server}
+\end{frame}
 \section{Features}
 
 
