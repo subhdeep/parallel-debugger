@@ -117,3 +117,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+pd-client
+pd-server
+test
+*.so
+*.o
