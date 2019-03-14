@@ -2,8 +2,16 @@
 \mode<presentation>{\usecolortheme{crane}}
 \usetheme{Madrid}
 
+
 \usepackage{graphicx}
 \usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+}
 
 \title{CS633 Project: Parallel Debugger}
 \author[Milind, Subhdeep]{Milind Luthra (150363) \and Subhdeep Saha (150732)}
@@ -29,9 +37,13 @@
 \frame{\titlepage}
 
 \section{Overview}
+
+\subsection{Motivation}
 \begin{frame}
-\frametitle{Sample frame title}
-This is a text in the first frame. This is a text in the first frame. This is a text in the first frame.
+  \frametitle{Motivation}
+  \begin{center}
+      \includegraphics[width=0.9\textwidth]{motivation}
+  \end{center}
 \end{frame}
 
 \subsection{Related Work}
@@ -60,7 +72,9 @@ This is a text in the first frame. This is a text in the first frame. This is a 
   \frametitle{Problems with XTerm + GDB}
   \texttt{mpiexec -n 30 xterm -e gdb ./test}
 
-  \includegraphics[width=0.9\textwidth]{usingxterm}
+  \begin{center}
+    \includegraphics[width=0.9\textwidth]{usingxterm}
+  \end{center}
 \end{frame}
 
 
@@ -76,7 +90,9 @@ This is a text in the first frame. This is a text in the first frame. This is a 
 
 \begin{frame}
   \frametitle{Basic Idea}
+  \begin{center}
    \includegraphics[width=0.8\textwidth]{flow}
+  \end{center}
 \end{frame}
 \section{Implementation}
 \subsection{parallel-debugger-client (pd-client)}
@@ -144,11 +160,92 @@ This is a text in the first frame. This is a text in the first frame. This is a 
   \begin{itemize}
   \item <1-> Ensures that all the clients are connected to it.
   \item <2-> Maintains a in-memory \texttt{map[rank int]conn *net.Conn} to store the clients that are already
-    connected. 
+    connected.
   \end{itemize}
   \frametitle{pd-server}
 \end{frame}
+
 \section{Features}
 
+\subsection{General Debugging Features}
+
+\begin{frame}
+  \frametitle{General Debugging Features}
+ \begin{itemize}
+ \item <1-> The main feature is to expose all the power of gdb in a user-friendly way (through a TUI).
+ \item <2-> Example: Set a breakpoint on \texttt{MPI\_Allgather} in \textit{each} process.
+ \item <3-> \texttt{(pdb) break MPI\_Allgather}
+ \item <4-> Example: Selectively print \texttt{argc} in processes with rank 4, 5, 6 (with respect to MPI\_COMM\_WORLD).
+ \item <5-> \texttt{(pdb) pdb\_print argc [r=4,5,6]}
+ \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{General Debugging Features}
+ \begin{itemize}
+ \item <1-> Example: List all communicators and associated processes' rank.
+ \item <2-> \texttt{(pdb) pdb\_listcomm}
+ \item <3-> Example: Selectively set breakpoint in processes in communicator 4.
+ \item <4-> \texttt{(pdb) pdb\_break MPI\_Allgather [c=4]}
+ \end{itemize}
+\end{frame}
+
+
+\subsection{MPI Specific Features}
+\begin{frame}
+  \frametitle{Missing Collective Calls}
+ \begin{itemize}
+ \item <1-> Missing a collective call in any one process of a communicator is a source of errors.
+ \item <2-> We are maintaining a communicator to processes mapping.
+ \item <3-> We can use this to maintain a list of collectives pending on a process.
+ \item <4-> Example: Listing all pending collectives.
+ \item <5-> \texttt{(pdb) pdb\_listcoll}
+ \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Modifying Buffer During Asynchronous Calls}
+ \begin{itemize}
+ \item <1-> A buffer passed to \texttt{MPI\_Isend} cannot be written to until we're sure that the it has been copied.
+ \item <2-> Usually done using \texttt{MPI\_Wait} or \texttt{MPI\_Test}.
+ \item <3-> We can track asynchronous calls using breakpoints.
+ \item <4-> We can track buffer writes using watchpoints.
+ \item <5-> Hence, we can give feedback for any invalid write.
+ \end{itemize}
+\end{frame}
+
+\section{Timeline}
+\begin{frame}
+  \frametitle{Timeline}
+  \begin{itemize}
+  \item <1-> Load and then instrument target binary in all nodes. \textsc{Done}
+  \item <2-> Communicate with \texttt{gdb/mi}. \textsc{Done}
+  \item <3-> Set up client and server communication (extract rank/size from instrumented binary). \textsc{Done}
+  \item <4-> Allow commands from server to all clients, and echo client console on server. \textsc{Done}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Timeline}
+  \begin{itemize}
+  \item <1-> Allow sending commands from server to only specific clients \textsc{Todo}
+  \item <2-> Make a nice TUI. \textsc{Todo}
+  \item <3-> Track communicator data and collective calls. \textsc{IfPossible}
+  \item <4-> Track asynchronous call buffers. \textsc{IfPossible}
+  \item <4-> Make a nice GUI. \textsc{IfAnyoneVolunteers}
+  \end{itemize}
+\end{frame}
+
+\section{References}
+\begin{frame}
+  \frametitle{References}
+  \begin{itemize}
+  \item \href{https://sourceware.org/gdb/onlinedocs/gdb/GDB_002fMI.html}{GDB/MI2 Documentation}
+  \item \href{https://github.com/cyrus-and/gdb}{Go library for talking to GDB/MI} - \href{https://github.com/milindl/gdb}{Our modified version of the library}.
+  \item \href{https://en.wikipedia.org/wiki/Allinea_DDT}{Allinea DDT}, \href{https://www.roguewave.com/products-services/totalview}{TotalView}
+  \item \href{https://www.open-mpi.org/faq/?category=debugging}{OpenMPI FAQ for Parallel Debugging}
+  \item \href{http://www.linux-mag.com/id/7210/}{Common MPI Programming Errors}
+  \end{itemize}
+\end{frame}
 
 \end{document}
