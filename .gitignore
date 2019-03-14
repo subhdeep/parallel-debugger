@@ -1,4 +1,3 @@
-*_test.c
 *test
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -117,8 +116,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-pd-client
-pd-server
+pd-client/pd-client
+pd-server/pd-server
 test
 *.so
 *.o
