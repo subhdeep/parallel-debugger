@@ -42,7 +42,7 @@
 \begin{frame}
   \frametitle{Motivation}
   \begin{center}
-      \includegraphics[width=0.9\textwidth]{motivation}
+      \includegraphics[width=\textwidth]{motivation}
   \end{center}
 \end{frame}
 
@@ -104,7 +104,7 @@
     \begin{itemize}
       \item <2-> Sends request to the server using \textbf{TCP sockets}.
     \end{itemize}
-    \item  <3-> Loads the target binary \texttt{./test} and instrument it using
+    \item  <3-> Loads the target binary \texttt{./test} and instruments it using
     LD preload.
   \item <4-> Acts as a frontend to the GDB interpreter \texttt{mi2}.
     \begin{itemize}
@@ -158,9 +158,14 @@
 
 \begin{frame}
   \begin{itemize}
-  \item <1-> Ensures that all the clients are connected to it.
-  \item <2-> Maintains a in-memory \texttt{map[rank int]conn *net.Conn} to store the clients that are already
-    connected.
+  \item <1-> Maintains an in-memory (rank $\rightarrow$ connection) map to store connected clients
+    and notifies user when all clients are connected.
+  \item <2-> Relays \texttt{gdb} commands to clients and gathers relevant output.
+  \item <3-> Displays a TUI for the user to control the clients.
+  \item <4-> Maintains additional information about target program.
+    \begin{itemize}
+    \item Example: Track processes in a communicator.
+    \end{itemize}
   \end{itemize}
   \frametitle{pd-server}
 \end{frame}
