@@ -40,6 +40,15 @@ func main() {
 		return true
 	})
 
+	gdbInstance.AddNotificationHook("ErrorSendingHook", func(notification map[string]interface{}) bool {
+		if notification["class"] == "error" {
+			// On getting a error notification, tell the server.
+			payload := notification["payload"].(map[string]interface{})
+			fmt.Fprintf(conn, "CONSOLE:%s\n", payload["msg"])
+		}
+		return true
+	})
+
 	// Each message from the server needs to be processed using ProcessMessage.
 	processCommandsDone := make(chan bool)
 	go gdbInstance.ProcessCommands(conn, processCommandsDone)

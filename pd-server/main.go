@@ -58,11 +58,44 @@ func takeUserInput() {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		input := strings.TrimSpace(scanner.Text())
-		sendCommandToAll(input)
+		command, ranks := parseInput(input)
+		sendCommandTo(command, ranks)
 	}
 }
 
-func sendCommandToAll(message string) {
+func parseInput(input string) (command string, ranks []int) {
+	command = input
+	ranks = nil
+	if !strings.HasPrefix(command, "pdb_") {
+		return
+	}
+
+	commandSegments := strings.Split(input, "\t ")
+	rankSpecString := strings.TrimSpace(commandSegments[len(commandSegments) - 1])
+
+	commandSegments = commandSegments[:len(commandSegments)-1]
+	command = strings.Join(commandSegments, " ")
+	command = strings.TrimPrefix(command, "pdb_")
+
+	// Right now, only support comma separated ranks.
+	ranksString := strings.Split(strings.Split(rankSpecString, "=")[1], ",")
+	ranks = make([]int, len(ranksString))
+	for i, rs := range ranksString {
+		ranks[i], _ = strconv.Atoi(rs)
+	}
+	fmt.Println(command, ranks)
+	return
+}
+
+func sendCommandTo(message string, ranks []int) {
+	if ranks != nil {
+		for _, rank := range ranks {
+			c := connections[rank]
+			fmt.Fprintf(*c, fmt.Sprintf("RUN:%s\n", message))
+		}
+		return
+	}
+
 	for _, c := range connections {
 		fmt.Fprintf(*c, fmt.Sprintf("RUN:%s\n", message))
 	}

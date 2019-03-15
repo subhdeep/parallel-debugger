@@ -35,8 +35,6 @@ func (g *GdbInstance) handleNotifications(notification map[string]interface{}) {
 		return
 
 	}
-	// jsonStr, _ := json.Marshal(notification)
-	// fmt.Println(string(jsonStr))
 
 	// Handle Synchronization, in case we get a ^running, we should
 	// wait for *stopped. Otherwise, we should carry on.
@@ -48,8 +46,9 @@ func (g *GdbInstance) handleNotifications(notification map[string]interface{}) {
 		}
 	case "stopped":
 		g.breakpointHitNotification <- 1
-	case "error":
-		fmt.Println("TODO: Error handling")
+	// case "error":
+	// 	jsonStr, _ := json.Marshal(notification)
+	// 	fmt.Println(string(jsonStr))
 	}
 
 	// Run any custom hooks
