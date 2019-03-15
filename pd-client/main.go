@@ -21,7 +21,7 @@ func main() {
 
 	gdbInstance := utils.NewGdb()
 
-	pdFilename := gdbInstance.InitGdb(filename)
+	pdFilename := gdbInstance.InitGdb(filename, conn)
 
 	f, err := os.Open(pdFilename)
 	utils.CheckError(err)

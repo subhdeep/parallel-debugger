@@ -98,11 +98,12 @@ func NewGdb() (g *GdbInstance) {
 }
 
 // InitGdb does the following:
-// 1. Mirror stdout of the target program to stdout of the go program (TODO: Send this to the server as well).
+// 1. Mirror stdout of the target program to stdout of the go program as well as the server.
 // 2. Add LD_PRELOAD with the shared library file.
 // 3. Run the code uptill MPI_Init, and write data about rank, size to pdFilename.
-func (g *GdbInstance) InitGdb(debugTarget string) (pdFilename string) {
+func (g *GdbInstance) InitGdb(debugTarget string, outputDest io.Writer) (pdFilename string) {
 	go io.Copy(os.Stdout, g.internal)
+	go io.Copy(outputDest, g.internal)
 
 	fname := getSoFilepath()
 	g.pdFilename = fmt.Sprintf("/tmp/pd_init_data_%d", os.Getpid())
