@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"encoding/json"
 	"net"
 	"os"
+	"strings"
 
 	"git.cse.iitk.ac.in/ssaha/parallel-debugger/utils"
 )
@@ -21,7 +23,7 @@ func main() {
 
 	gdbInstance := utils.NewGdb()
 
-	pdFilename := gdbInstance.InitGdb(filename, conn)
+	pdFilename := gdbInstance.InitGdb(filename)
 
 	f, err := os.Open(pdFilename)
 	utils.CheckError(err)
@@ -35,7 +37,13 @@ func main() {
 	gdbInstance.AddNotificationHook("ConsoleSendingHook", func(notification map[string]interface{}) bool {
 		if notification["type"] == "console" {
 			// On getting a console notification, relay it to the server.
-			fmt.Fprintf(conn, "CONSOLE:%s", notification["payload"])
+			// Filter newlines though. They will be added by us at server side!
+			payload := strings.TrimSpace(notification["payload"].(string))
+			if payload == "" || payload == "\n" {
+				return true
+			}
+			fmt.Fprintf(conn, "CONSOLE:%s\n", payload)
+			fmt.Println(payload)
 		}
 		return true
 	})
@@ -44,8 +52,17 @@ func main() {
 		if notification["class"] == "error" {
 			// On getting a error notification, tell the server.
 			payload := notification["payload"].(map[string]interface{})
-			fmt.Fprintf(conn, "CONSOLE:%s\n", payload["msg"])
+			msg := payload["msg"].(string)
+			msg = strings.TrimSpace(msg)
+			fmt.Fprintf(conn, "CONSOLE:%s\n", msg)
+			fmt.Println(msg)
 		}
+		return true
+	})
+
+	gdbInstance.AddNotificationHook("LoggingHook", func(notification map[string]interface{}) bool {
+		jsonStr, _ := json.Marshal(notification)
+		log.Println(string(jsonStr))
 		return true
 	})
 
