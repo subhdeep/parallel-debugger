@@ -149,13 +149,13 @@ func sendCommandTo(message string, ranks []int) {
 			if !rankExists {
 				continue
 			}
-			fmt.Fprintf(*c, fmt.Sprintf("RUN:%s\n", message))
+			fmt.Fprintf(*c, "%s", fmt.Sprintf("RUN:%s\n", message))
 		}
 		return
 	}
 
 	for _, c := range connections {
-		fmt.Fprintf(*c, fmt.Sprintf("RUN:%s\n", message))
+		fmt.Fprintf(*c, "%s", fmt.Sprintf("RUN:%s\n", message))
 	}
 }
 
