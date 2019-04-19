@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"container/list"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -15,7 +17,22 @@ import (
 
 var connections = make(map[int]*net.Conn)
 
+type CollectiveCall struct {
+	funcName string
+	callers  map[int]*utils.CollectiveInfo
+}
+
+var collectiveCallList struct {
+	calls *list.List
+	mux   sync.Mutex
+}
+
 func main() {
+	// Initialize some structs.
+	collectiveCallList.mux.Lock()
+	collectiveCallList.calls = list.New()
+	collectiveCallList.mux.Unlock()
+
 	port := 8080
 	host := "0.0.0.0"
 	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
@@ -133,29 +150,44 @@ func takeUserInput() {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		input := scanner.Text()
-		command, ranks := parseInput(input)
-		sendCommandTo(command, ranks)
+		if input == "pdb_listcoll" {
+			calls := pendingCollectiveInfo()
+			prettyPrintCollectiveInfo(calls)
+		} else if strings.HasPrefix(input, "pdb_trackcoll") {
+			toggleCollective(strings.Split(input)[1])
+		} else {
+			command, ranks := parseInput(input)
+			sendCommandTo(command, ranks)
+		}
 	}
 }
 
+func sendCommandTo(message string, ranks []int) {
+	sendMsgTo(message, ranks, "RUN")
+}
+
+func toggleCollective(coll string) {
+	sendMsgTo(coll, nil, "COLLECTIVE")
+}
 // Send the `message` to ranks specified inside `ranks`.
 // If `ranks` is nil, then send message to all the connected clients.
 // In case we are trying to send a message to some non-existent client,
 // ignore that silently.
-func sendCommandTo(message string, ranks []int) {
+// The sent message is of the form <prefix>:<message>
+func sendMsgTo(message string, ranks []int, prefix string) {
 	if ranks != nil {
 		for _, rank := range ranks {
 			c, rankExists := connections[rank]
 			if !rankExists {
 				continue
 			}
-			fmt.Fprintf(*c, "%s", fmt.Sprintf("RUN:%s\n", message))
+			fmt.Fprintf(*c, "%s", fmt.Sprintf("%s:%s\n", prefix, message))
 		}
 		return
 	}
 
 	for _, c := range connections {
-		fmt.Fprintf(*c, "%s", fmt.Sprintf("RUN:%s\n", message))
+		fmt.Fprintf(*c, "%s", fmt.Sprintf("%s:%s\n", prefix, message))
 	}
 }
 
@@ -176,11 +208,84 @@ func processClientMessage(wSize int, processClientDone chan bool) {
 			for scanner.Scan() {
 				utils.CheckError(scanner.Err())
 				line := scanner.Text()
-				fmt.Printf("rank %d: %s\n", r, line)
+				lineSplit := strings.SplitN(line, ":", 2)
+				handleClientMessage(lineSplit[0], lineSplit[1], r)
 			}
 		}(r, c)
 
 	}
 	waitGroup.Wait()
 	processClientDone <- true
+}
+
+func handleClientMessage(cat string, msg string, rank int) {
+	switch cat {
+	case "CONSOLE":
+		fmt.Printf("[rank %d] %s\n", rank, msg)
+	case "ERROR":
+		fmt.Printf("[rank %d] (!) %s\n", rank, msg)
+	case "COLLECTIVE":
+		var coll utils.CollectiveInfo
+		_ = json.Unmarshal([]byte(msg), &coll)
+		trackCollective(coll)
+	}
+}
+
+func trackCollective(info utils.CollectiveInfo) {
+	collectiveCallList.mux.Lock()
+	defer collectiveCallList.mux.Unlock()
+	cl := collectiveCallList.calls
+	var c_ *list.Element
+	var toRemove *list.Element = nil
+	for c_ = cl.Front(); c_ != nil; c_ = c_.Next() {
+		c := c_.Value.(*CollectiveCall)
+		_, ok := c.callers[info.Rank]
+		if c.funcName == info.FunctionName && !ok {
+			c.callers[info.Rank] = &info
+			if len(c.callers) == len(connections) {
+				toRemove = c_
+			}
+			break
+		}
+	}
+
+	if toRemove != nil {
+		cl.Remove(toRemove)
+	}
+
+	if c_ == nil {
+		clrs := make(map[int]*utils.CollectiveInfo)
+		clrs[info.Rank] = &info
+		c := &CollectiveCall{
+			info.FunctionName,
+			clrs,
+		}
+		cl.PushBack(c)
+	}
+}
+
+func pendingCollectiveInfo() (calls []CollectiveCall) {
+	collectiveCallList.mux.Lock()
+	defer collectiveCallList.mux.Unlock()
+	cl := collectiveCallList.calls
+	for c_ := cl.Front(); c_ != nil; c_ = c_.Next() {
+		c := c_.Value.(*CollectiveCall)
+		calls = append(calls, *c)
+	}
+	return
+}
+
+func prettyPrintCollectiveInfo(calls []CollectiveCall) {
+	for _, call := range calls {
+		s := fmt.Sprintf("Collective function %s:\n", call.funcName)
+		for i := 0; i < len(connections); i++ {
+			info, ok := call.callers[i]
+			if !ok {
+				s += fmt.Sprintf("Rank %d: pending\n", i)
+			} else {
+				s += fmt.Sprintf("Rank %d: Called at %s\n", i, info.LineInfo)
+			}
+		}
+		fmt.Println(s)
+	}
 }

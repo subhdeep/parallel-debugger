@@ -21,7 +21,8 @@ func main() {
 	utils.CheckError(err)
 	filename := os.Args[2]
 
-	gdbInstance := utils.NewGdb()
+	cInfoChan := make(chan utils.CollectiveInfo)
+	gdbInstance := utils.NewGdb(cInfoChan)
 
 	pdFilename := gdbInstance.InitGdb(filename)
 
@@ -31,6 +32,19 @@ func main() {
 	utils.CheckError(err)
 	fmt.Fprintf(conn, "%s", line)
 	log.Printf("GDB Initialized\n")
+
+	// Each time we get some communicator info, send to the server to process.
+	go (func() {
+		var c utils.CollectiveInfo
+		for {
+			c = <-cInfoChan
+			out, err := json.Marshal(c)
+			if err != nil {
+				continue
+			}
+			fmt.Fprintf(conn, "COLLECTIVE:%s\n", out)
+		}
+	})()
 
 	// Each output that the gdb instance gets from gdb mi must be processed.
 	// One hook is added here, which will send all ~console messages to the server.
@@ -54,7 +68,7 @@ func main() {
 			payload := notification["payload"].(map[string]interface{})
 			msg := payload["msg"].(string)
 			msg = strings.TrimSpace(msg)
-			fmt.Fprintf(conn, "CONSOLE:%s\n", msg)
+			fmt.Fprintf(conn, "ERROR:%s\n", msg)
 			fmt.Println(msg)
 		}
 		return true
