@@ -12,7 +12,9 @@ import (
 	"strings"
 	"sync"
 
+	"git.cse.iitk.ac.in/ssaha/parallel-debugger/pd-server/tui"
 	"git.cse.iitk.ac.in/ssaha/parallel-debugger/utils"
+	tuiGo "github.com/marcusolsson/tui-go"
 )
 
 var connections = make(map[int]*net.Conn)
@@ -35,6 +37,7 @@ func main() {
 
 	port := 8080
 	host := "0.0.0.0"
+
 	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	utils.CheckError(err)
 	log.Printf("Server running on port %d\n", port)
@@ -138,12 +141,25 @@ func handleConnection(c net.Conn) {
 		for _, v := range connections {
 			fmt.Fprintf(*v, "COMMAND:All clients, including you, are connected\n")
 		}
-		go takeUserInput()
+		t := tui.NewTUI(connections)
+		// 	t.ShowMessagesAll(e.Text())
+		// })
+		t.DrawUI()
+		t.ShowMessagesAll("You are connected")
+		t.Input.OnSubmit(func(e *tuiGo.Entry) {
+			if e.Text() == "quit" {
+				t.Quit()
+			}
+			takeUserInput(e.Text())
+			t.Input.SetText("")
+		})
+
 		processClient := make(chan bool)
-		go processClientMessage(wSize, processClient)
+		go processClientMessage(wSize, processClient, t)
 		<-processClient
 		connections = make(map[int]*net.Conn)
 	}
+
 }
 
 func takeUserInput() {
@@ -169,6 +185,7 @@ func sendCommandTo(message string, ranks []int) {
 func toggleCollective(coll string) {
 	sendMsgTo(coll, nil, "COLLECTIVE")
 }
+
 // Send the `message` to ranks specified inside `ranks`.
 // If `ranks` is nil, then send message to all the connected clients.
 // In case we are trying to send a message to some non-existent client,
@@ -191,7 +208,7 @@ func sendMsgTo(message string, ranks []int, prefix string) {
 	}
 }
 
-func processClientMessage(wSize int, processClientDone chan bool) {
+func processClientMessage(wSize int, processClientDone chan bool, t *tui.TUI) {
 	if wSize != len(connections) {
 		return
 	}
@@ -212,8 +229,8 @@ func processClientMessage(wSize int, processClientDone chan bool) {
 				handleClientMessage(lineSplit[0], lineSplit[1], r)
 			}
 		}(r, c)
-
 	}
+
 	waitGroup.Wait()
 	processClientDone <- true
 }
