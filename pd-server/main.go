@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -142,15 +141,11 @@ func handleConnection(c net.Conn) {
 			fmt.Fprintf(*v, "COMMAND:All clients, including you, are connected\n")
 		}
 		t := tui.NewTUI(connections)
-		// 	t.ShowMessagesAll(e.Text())
-		// })
 		t.DrawUI()
 		t.ShowMessagesAll("You are connected")
 		t.Input.OnSubmit(func(e *tuiGo.Entry) {
-			if e.Text() == "quit" {
-				t.Quit()
-			}
-			takeUserInput(e.Text())
+			takeUserInput(e.Text(), t)
+			t.AddToCmdHistory(e.Text())
 			t.Input.SetText("")
 		})
 
@@ -162,19 +157,30 @@ func handleConnection(c net.Conn) {
 
 }
 
-func takeUserInput() {
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		input := scanner.Text()
-		if input == "pdb_listcoll" {
-			calls := pendingCollectiveInfo()
-			prettyPrintCollectiveInfo(calls)
-		} else if strings.HasPrefix(input, "pdb_trackcoll") {
-			toggleCollective(strings.Split(input)[1])
-		} else {
-			command, ranks := parseInput(input)
-			sendCommandTo(command, ranks)
-		}
+func takeUserInput(input string, t *tui.TUI) {
+	if input == "pdb_listcoll" {
+		calls := pendingCollectiveInfo()
+		go prettyPrintCollectiveInfo(calls, t)
+	} else if input == "quit" {
+		t.Quit()
+	} else if strings.HasPrefix(input, "swap") {
+		vals := strings.Split(input, " ")
+		newRank, _ := strconv.Atoi(vals[1])
+		oldRank, _ := strconv.Atoi(vals[2])
+		t.Swap(newRank, oldRank)
+	} else if strings.HasPrefix(input, "add") {
+		vals := strings.Split(input, " ")
+		rank, _ := strconv.Atoi(vals[1])
+		t.Add(rank)
+	} else if strings.HasPrefix(input, "remove") {
+		vals := strings.Split(input, " ")
+		rank, _ := strconv.Atoi(vals[1])
+		t.Remove(rank)
+	} else if strings.HasPrefix(input, "pdb_trackcoll") {
+		toggleCollective(strings.Split(input, " ")[1])
+	} else {
+		command, ranks := parseInput(input)
+		sendCommandTo(command, ranks)
 	}
 }
 
@@ -226,7 +232,7 @@ func processClientMessage(wSize int, processClientDone chan bool, t *tui.TUI) {
 				utils.CheckError(scanner.Err())
 				line := scanner.Text()
 				lineSplit := strings.SplitN(line, ":", 2)
-				handleClientMessage(lineSplit[0], lineSplit[1], r)
+				handleClientMessage(lineSplit[0], lineSplit[1], r, t)
 			}
 		}(r, c)
 	}
@@ -235,12 +241,14 @@ func processClientMessage(wSize int, processClientDone chan bool, t *tui.TUI) {
 	processClientDone <- true
 }
 
-func handleClientMessage(cat string, msg string, rank int) {
+func handleClientMessage(cat string, msg string, rank int, t *tui.TUI) {
 	switch cat {
 	case "CONSOLE":
-		fmt.Printf("[rank %d] %s\n", rank, msg)
+		// fmt.Printf("[rank %d] %s\n", rank, msg)
+		t.ShowMessagesClient(msg, rank)
 	case "ERROR":
-		fmt.Printf("[rank %d] (!) %s\n", rank, msg)
+		// fmt.Printf("[rank %d] (!) %s\n", rank, msg)
+		t.ShowMessagesClient(msg, rank)
 	case "COLLECTIVE":
 		var coll utils.CollectiveInfo
 		_ = json.Unmarshal([]byte(msg), &coll)
@@ -292,7 +300,7 @@ func pendingCollectiveInfo() (calls []CollectiveCall) {
 	return
 }
 
-func prettyPrintCollectiveInfo(calls []CollectiveCall) {
+func prettyPrintCollectiveInfo(calls []CollectiveCall, t *tui.TUI) {
 	for _, call := range calls {
 		s := fmt.Sprintf("Collective function %s:\n", call.funcName)
 		for i := 0; i < len(connections); i++ {
@@ -303,6 +311,7 @@ func prettyPrintCollectiveInfo(calls []CollectiveCall) {
 				s += fmt.Sprintf("Rank %d: Called at %s\n", i, info.LineInfo)
 			}
 		}
-		fmt.Println(s)
+		t.ShowMessagesAll(s)
+
 	}
 }

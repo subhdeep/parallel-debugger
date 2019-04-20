@@ -61,8 +61,8 @@ func (g *GdbInstance) InitGdb(debugTarget string) (pdFilename string) {
 	g.SynchronizedSend("finish")
 	g.SynchronizedSend("clear PMPI_Init")
 
-	g.toggleCollectiveTracking("MPI_Barrier")
-	g.toggleCollectiveTracking("MPI_Barrier")
+	g.toggleCollectiveTracking("MPI_Bcast")
+	// g.toggleCollectiveTracking("MPI_Barrier")
 	// g.SynchronizedSend("break internal_MPI_Barrier")
 	// g.SynchronizedSend("break internal_MPI_Bcast")
 
