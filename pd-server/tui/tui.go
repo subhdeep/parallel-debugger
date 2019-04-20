@@ -89,30 +89,32 @@ func (t *TUI) DrawUI() {
 			return
 		}
 
-		if t.histPtr < 0 {
-			return
+		if t.histPtr < 0 || t.histPtr > len(t.cmdHistory) {
+			panic("History pointer gone")
 		}
-		t.Input.SetText(t.cmdHistory[t.histPtr])
+
 		if t.histPtr != 0 {
 			t.histPtr--
 		}
+		t.Input.SetText(t.cmdHistory[t.histPtr])
 	})
 
 	t.ui.SetKeybinding("Down", func() {
-		if len(t.cmdHistory) == 0 || t.histPtr == 0 {
+		if len(t.cmdHistory) == 0  || t.histPtr == len(t.cmdHistory) {
 			return
 		}
+
+		if t.histPtr < 0 || t.histPtr > len(t.cmdHistory) {
+			panic("History pointer gone")
+		}
+
+
+		t.histPtr++
 		if t.histPtr == len(t.cmdHistory) {
 			t.Input.SetText("")
-			t.histPtr = len(t.cmdHistory) - 1
 			return
 		}
 		t.Input.SetText(t.cmdHistory[t.histPtr])
-		fmt.Fprintln(os.Stderr, t.histPtr, "before")
-		if t.histPtr != len(t.cmdHistory) {
-			t.histPtr++
-		}
-		fmt.Fprintln(os.Stderr, t.histPtr, "after")
 	})
 
 	go func() {
@@ -125,7 +127,7 @@ func (t *TUI) DrawUI() {
 
 func (t *TUI) AddToCmdHistory(hist string) {
 	t.cmdHistory = append(t.cmdHistory, hist)
-	t.histPtr = len(t.cmdHistory) - 1
+	t.histPtr = len(t.cmdHistory)
 }
 
 func (t *TUI) reDraw(rank int, cat string) {
