@@ -27,7 +27,7 @@ In a terminal window, run
 
 ```sh
 $ cd pd-server
-$ ./pd-server
+$ ./pd-server 2> /dev/null
 ```
 
 In a separate terminal window, run
