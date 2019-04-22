@@ -208,7 +208,20 @@ func processBkpt(collective) {
 One major caveat of using custom MPI functions is that we can't set breakpoints on them anymore. So, it's not possible to break on \texttt{MPI\_Send}, rather you need to break on \texttt{PMPI\_Send}.
 
 \subsection{TUI}
+\begin{samepage}
+  \begin{lstlisting}[language=Go, caption=Struct for the complete interface]
+    type TUI struct {
+	root         *tui.Box
+	ui           tui.UI
+	clients      map[int]*tui.Box
+	Input        *tui.Entry
+	clientParent *tui.Box
+        ...
+}
+\end{lstlisting}
+\end{samepage}
 
+Here the \texttt{root} is the parent container which can hold the window for every client which is connected to the server.
 
 \section{Future Work}
 
