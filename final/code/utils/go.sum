@@ -1,0 +1,4 @@
+github.com/kr/pty v1.1.4 h1:5Myjjh3JY/NaAi4IsUbHADytDyl1VE1Y9PXDlL+P/VQ=
+github.com/kr/pty v1.1.4/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
+github.com/milindl/gdb v0.0.0-20190313144628-2570327651ab h1:5xApcn0ubDS5NWSjRSzPagqQMSzO+lNKMo6R5OWXYP8=
+github.com/milindl/gdb v0.0.0-20190313144628-2570327651ab/go.mod h1:4SNwb7h3b1WynTWYfPS7wzZOKP2Sv+MW9XFLXFWgPyA=
