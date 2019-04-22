@@ -144,6 +144,7 @@ func handleConnection(c net.Conn) {
 		t.DrawUI()
 		t.ShowMessagesAll("You are connected")
 		t.Input.OnSubmit(func(e *tuiGo.Entry) {
+			// t.ShowUserInputAll(e.Text())
 			takeUserInput(e.Text(), t)
 			t.AddToCmdHistory(e.Text())
 			t.Input.SetText("")
@@ -181,6 +182,7 @@ func takeUserInput(input string, t *tui.TUI) {
 	} else {
 		command, ranks := parseInput(input)
 		sendCommandTo(command, ranks)
+		t.ShowUserInputClients(command, ranks)
 	}
 }
 

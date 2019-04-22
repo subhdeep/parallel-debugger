@@ -100,14 +100,13 @@ func (t *TUI) DrawUI() {
 	})
 
 	t.ui.SetKeybinding("Down", func() {
-		if len(t.cmdHistory) == 0  || t.histPtr == len(t.cmdHistory) {
+		if len(t.cmdHistory) == 0 || t.histPtr == len(t.cmdHistory) {
 			return
 		}
 
 		if t.histPtr < 0 || t.histPtr > len(t.cmdHistory) {
 			panic("History pointer gone")
 		}
-
 
 		t.histPtr++
 		if t.histPtr == len(t.cmdHistory) {
@@ -203,6 +202,49 @@ func (t *TUI) ShowMessagesAll(message string) {
 			b.Append(command)
 		}
 	})
+}
+
+// ShowUserInputAll displays user input
+// to all the clients in display
+func (t *TUI) showUserInputAll(message string) {
+	command := tui.NewHBox(
+		tui.NewPadder(1, 0, tui.NewLabel(message)),
+		tui.NewSpacer(),
+	)
+
+	var rank int
+	for rank = range t.conn {
+		t.history[rank] = append(t.history[rank], message)
+	}
+
+	var b *tui.Box
+	for rank, b = range t.clients {
+		b.Append(command)
+	}
+}
+
+// ShowInputClients sows the messages of particular client(s)
+func (t *TUI) ShowUserInputClients(message string, ranks []int) {
+	if len(ranks) == 0 {
+		t.showUserInputAll(message)
+		return
+	}
+
+	for _, rank := range ranks {
+		command := tui.NewHBox(
+			tui.NewPadder(1, 0, tui.NewLabel(message)),
+			tui.NewSpacer(),
+		)
+
+		t.history[rank] = append(t.history[rank], message)
+
+		var c *tui.Box
+		var ok bool
+		if c, ok = t.clients[rank]; !ok {
+			continue
+		}
+		c.Append(command)
+	}
 }
 
 // ShowMessagesClient the messages of a particular client
