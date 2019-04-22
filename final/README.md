@@ -1,9 +1,9 @@
 # Prerequisites
 
 To install and run our code, you need the following:
-    - mpicc (we used 3.3)
-    - gcc (we used 8.3)
-    - go (we used 1.11.6. At least 1.11 is needed)
++ mpicc (we used 3.3)
++ gcc (we used 8.3)
++ go (we used 1.11.6. At least 1.11 is needed)
 
 To build the server, `cd` into `pd-server` and run:
 
@@ -43,4 +43,3 @@ For ease of testing, there is a preexisting C file which is compiled into a bina
 $ cd pd-client
 $ mpiexec -n 4 ./pd-client "localhost:8080" ./test
 ```
-
