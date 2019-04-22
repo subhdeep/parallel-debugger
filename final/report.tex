@@ -54,11 +54,6 @@ Our idea is based on the idea given above in \cite{openmpidebug}, through multip
 
 The project is written almost entirely in Go, and communication between processes and the server is through TCP sockets. An overview of the project in Fig \ref{fig:overview} describes the various roles that will be discussed in detail in Section \ref{sec:impl}
 
-\begin{figure}[h]
-  \includegraphics[width=0.4\textwidth]{overview}
-  \caption{High level overview of how the parallel debugger works}
-  \label{fig:overview}
-\end{figure}
 
 
 \section{Features}
@@ -84,7 +79,6 @@ There is a Go library \cite{gogdb} which allows us to interact with the MI inter
 
 The file of interest is \texttt{gdb.go}. Here, we will highlight a few things. First, how we have implemented a synchronous (blocking) method to send commands - it involves two functions, \texttt{SynchronizedSend} and \texttt{handleNotifications}. The first function is the exposed API for the \texttt{GDBInstance} object, while the second is an event handler that is automatically called by the \texttt{gdb} library when an asynchronous notification is received.
 
-\clearpage
 \begin{samepage}
 \begin{lstlisting}[language=Go, caption=Partial pseudocode for Synchronized Send]
   func handleNotification(notification) {
@@ -216,12 +210,22 @@ One major caveat of using custom MPI functions is that we can't set breakpoints 
 	clients      map[int]*tui.Box
 	Input        *tui.Entry
 	clientParent *tui.Box
-        ...
+	conn         map[int]*net.Conn
+	numOfClients int
+	history      map[int][]string
+	cmdHistory   []string
+	histPtr      int
+
 }
 \end{lstlisting}
 \end{samepage}
 
-Here the \texttt{root} is the parent container which can hold the window for every client which is connected to the server.
+We have used a Go library \cite{gotui} to implement the TUI for our debugger.
+Here \texttt{root} is the parent container which can hold the window for every
+client which is connected to the server.
+The interface is implemented in a decoupled fashion where all the functions
+which are required to update the screen are mentioned in a separate file
+\texttt{pd-server/tui}. Therefore we can extend the tui by just adding functions to the library.
 
 \section{Future Work}
 
@@ -246,5 +250,12 @@ This section details the division of work amongst us.
 
 \bibliographystyle{IEEEtran}
 \bibliography{report}
+
+\begin{figure}[p]
+  \includegraphics[width=\textwidth]{overview}
+  \caption{High level overview of how the parallel debugger works}
+  \label{fig:overview}
+\end{figure}
+
 
 \end{document}
